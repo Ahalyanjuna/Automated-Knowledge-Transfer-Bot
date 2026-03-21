@@ -2,6 +2,10 @@
 =============================================================================
 pipeline.py  —  Stage 2: NLP Preprocessing Pipeline  (Orchestrator)
 =============================================================================
+pip install scikit-learn numpy chardet sentence-transformers langdetect langid deep-translator spacy pyyaml pymupdf beautifulsoup4 openai cohere
+>> python -m spacy download en_core_web_sm
+python nlp_stage2/nlp_pipeline.py --input chunks.json --output nlp_chunks.json
+
 Wires all six NLP steps together in sequence:
 
   Stage 1 output  (chunks.json / List[Chunk])
