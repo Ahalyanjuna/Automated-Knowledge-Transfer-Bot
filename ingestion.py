@@ -1,5 +1,4 @@
 """
-pip install pyyaml chardet beautifulsoup4 pymupdf tree-sitter tree-sitter-javascript tree-sitter-java tree-sitter-c tree-sitter-cpp tree-sitter-go tree-sitter-rust
 =============================================================================
 STAGE 1 — INPUT INGESTION & PARSING  (Universal Edition)
 KT Bot: Automated Knowledge Transfer System
@@ -194,10 +193,9 @@ FILE_REGISTRY: dict[str, tuple[str, str, str]] = {
     ".yaml":      ("config",   "yaml",        "yaml"),
     ".yml":       ("config",   "yaml",        "yaml"),
     ".toml":      ("config",   "toml",        "toml"),
-    ".ini":       ("config",   "ini",         "ini"),
-    ".cfg":       ("config",   "ini",         "ini"),
-    ".conf":      ("config",   "ini",         "ini"),
-    ".env":       ("config",   "env",         "ini"),
+    # .ini / .cfg / .conf / .env  →  SKIPPED (see SKIP_FILENAMES below)
+    # These often contain secrets (API keys, passwords, tokens) or are
+    # tool-specific noise (.editorconfig, .gitignore). Not useful for KT.
     ".xml":       ("data",     "xml",         "xml"),
     ".svg":       ("data",     "xml",         "xml"),
     ".csv":       ("data",     "csv",         "csv"),
@@ -241,12 +239,7 @@ FILENAME_REGISTRY: dict[str, tuple[str, str, str]] = {
     "dockerfile":      ("infra",   "dockerfile", "dockerfile"),
     "makefile":        ("infra",   "makefile",   "makefile"),
     "gnumakefile":     ("infra",   "makefile",   "makefile"),
-    ".env":            ("config",  "env",         "ini"),
-    ".env.example":    ("config",  "env",         "ini"),
-    ".env.local":      ("config",  "env",         "ini"),
-    ".gitignore":      ("config",  "text",        "text"),
-    ".dockerignore":   ("config",  "text",        "text"),
-    ".editorconfig":   ("config",  "ini",         "ini"),
+    # .env / .gitignore / .editorconfig  →  SKIPPED (see SKIP_FILENAMES below)
     "requirements.txt":("config",  "text",        "text"),
     "pipfile":         ("config",  "toml",        "toml"),
     "gemfile":         ("config",  "text",        "text"),
@@ -274,6 +267,31 @@ SKIP_EXTENSIONS = {
     ".ttf",".woff",".woff2",".eot",".otf",
     # Misc
     ".db",".sqlite",".pickle",".pkl",".npy",".npz",
+    # ── Security / Noise config extensions ───────────────────────────────
+    # .env   → may contain API keys, passwords, tokens, secrets
+    # .ini / .cfg / .conf → tool-specific settings, no KT value
+    ".env", ".ini", ".cfg", ".conf",
+}
+
+# Exact filenames to always skip (case-insensitive match)
+SKIP_FILENAMES = {
+    # ── Secret / credential files ─────────────────────────────────────────
+    ".env",             # environment variables — often contains real secrets
+    ".env.local",       # local overrides — same risk
+    ".env.example",     # example env — still shows secret key names/structure
+    ".env.production",  # production secrets
+    ".env.staging",     # staging secrets
+    # ── VCS / editor noise ───────────────────────────────────────────────
+    ".gitignore",       # lists ignored paths — not useful for KT
+    ".gitattributes",   # git file attribute rules — not useful for KT
+    ".dockerignore",    # lists Docker-ignored paths — not useful for KT
+    ".editorconfig",    # editor formatting rules — not useful for KT
+    ".prettierrc",      # formatter config — not useful for KT
+    ".eslintrc",        # linter config — not useful for KT
+    ".eslintignore",    # linter ignore list — not useful for KT
+    ".babelrc",         # transpiler config — not useful for KT
+    ".npmrc",           # npm registry config — may contain auth tokens
+    ".yarnrc",          # yarn config — may contain auth tokens
 }
 
 SKIP_DIRS = {
@@ -1175,6 +1193,11 @@ class RepoLoader:
             name = p.name.lower()
 
             if ext in SKIP_EXTENSIONS: continue
+
+            # Skip security-sensitive and noise files by exact filename
+            if name in SKIP_FILENAMES:
+                log.debug(f"  Skipping (sensitive/noise): {p.name}")
+                continue
 
             entry = FILE_REGISTRY.get(ext) or FILENAME_REGISTRY.get(name)
             if entry:
