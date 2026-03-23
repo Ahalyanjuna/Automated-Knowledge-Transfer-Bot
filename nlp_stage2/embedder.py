@@ -31,6 +31,8 @@ import os
 import logging
 from typing import Optional
 from models import NLPChunk
+import torch.nn as nn
+import numpy as np
 
 log = logging.getLogger("embedder")
 

@@ -32,7 +32,7 @@ import re
 import logging
 from dataclasses import asdict
 from models import NLPChunk, SemanticSegment
-
+import numpy as np
 log = logging.getLogger("semantic_chunker")
 
 # ── Optional sentence-transformers ────────────────────────────────────────
