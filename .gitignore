@@ -7,5 +7,3 @@ genai/chroma_visioncortex/
 .DS_Store
 .env
 *.db
-output/
-output
