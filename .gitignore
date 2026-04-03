@@ -1,0 +1,8 @@
+venv/
+__pycache__/
+*.pyc
+rl_feedback.db
+chroma_visioncortex/
+genai/chroma_visioncortex/
+.DS_Store
+.env
