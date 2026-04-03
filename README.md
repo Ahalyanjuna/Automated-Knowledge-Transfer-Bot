@@ -11,10 +11,10 @@ pip install -r requirements.txt
 2. Configuration
 Open app.py and genai/chat_engine.py and ensure your Groq API Key is set:
 
-API_KEY = "your-api-key"
+GROQ_API_KEY = "your-api-key"
 
 Step 1: Ingest the Codebase
-python genai/ingest.py
+python genai/load_chunks_to_chromadb.py
 Output: Creates a folder named chroma_visioncortex.
 
 Step 2: Initialize the RL Brain
