@@ -1074,23 +1074,23 @@ def show_user():
         """, unsafe_allow_html=True)
         st.caption(f"**{user[1]}** · {user[3]}")
 
-        st.divider()
+        # st.divider()
 
-        projects = get_available_projects()
-        if projects:
-            if st.session_state.selected_project not in projects:
-                st.session_state.selected_project = projects[0]
+        # projects = get_available_projects()
+        # if projects:
+        #     if st.session_state.selected_project not in projects:
+        #         st.session_state.selected_project = projects[0]
 
-            st.session_state.selected_project = st.selectbox(
-                "Project",
-                options=projects,
-                index=projects.index(st.session_state.selected_project),
-                help="Choose which project knowledge base to ask about"
-            )
-        else:
-            st.warning("No chroma_* project folders found in the root directory.")
+        #     st.session_state.selected_project = st.selectbox(
+        #         "Project",
+        #         options=projects,
+        #         index=projects.index(st.session_state.selected_project),
+        #         help="Choose which project knowledge base to ask about"
+        #     )
+        # else:
+        #     st.warning("No chroma_* project folders found in the root directory.")
 
-        st.divider()
+        # st.divider()
         st.info("💡 Ask anything about the selected codebase. Your feedback helps improve the bot.")
         st.divider()
         if st.button("🚪 Logout", use_container_width=True):

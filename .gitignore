@@ -4,6 +4,8 @@ __pycache__/
 rl_feedback.db
 chroma_visioncortex/
 genai/chroma_visioncortex/
+chroma_*
+chroma_*/
 .DS_Store
 .env
 *.db
