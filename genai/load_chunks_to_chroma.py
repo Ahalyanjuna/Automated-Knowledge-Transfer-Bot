@@ -6,8 +6,8 @@ from collections import defaultdict
 
 # ─── Configuration ───────────────────────────────────────────────────────────
 INPUT_JSON      = Path("../output/nlp_chunks.json")          # adjust path if needed
-PERSIST_DIR     = Path("../chroma_visioncortex")       # where DB files saved
-COLLECTION_NAME = "visioncortex_rag"                  # choose a meaningful name
+PERSIST_DIR     = Path("../chroma_arxivsense")       # where DB files saved
+COLLECTION_NAME = "arxivsense_rag"                  # choose a meaningful name
 BATCH_SIZE      = 200                                 # tune based on RAM (500–1000 ok for most)
 
 # ─── Load your chunks ────────────────────────────────────────────────────────

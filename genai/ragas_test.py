@@ -1,49 +1,111 @@
-from chat_engine import KTChatEngine
+# from chat_engine import KTChatEngine
+# import pandas as pd
+# from dotenv import load_dotenv
+
+# load_dotenv()
+# API_KEY = os.getenv("GROQ_API_KEY")
+
+# def run_ragas_lite_test():
+#     # 1. Setup the Engine
+#     engine = KTChatEngine(API_KEY)
+    
+#     # 2. Define "Golden Questions" (What the bot SHOULD know)
+#     test_queries = [
+#         "What database is used for storing faces?",
+#         "How do I register a new face?",
+#         "What happens if the 'logs' directory is missing?"
+#     ]
+    
+#     results = []
+    
+#     print("🚀 Starting RAGAS-Lite Evaluation...")
+    
+#     for query in test_queries:
+#         print(f"Testing: {query}")
+#         response = engine.generate_response(query)
+        
+#         # We simulate the RAGAS metrics: 
+#         # Faithfulness: Is the answer in the source?
+#         # Relevance: Does it answer the user?
+        
+#         results.append({
+#             "Question": query,
+#             "Answer": response['answer'][:100] + "...", # Snippet
+#             "Sources": ", ".join(response['sources']),
+#             "Source_Count": len(response['sources'])
+#         })
+
+#     # 3. Show a Summary Table
+#     df = pd.DataFrame(results)
+#     print("\n--- Test Results ---")
+#     print(df.to_string())
+    
+#     if df['Source_Count'].min() > 0:
+#         print("\n✅ PASSED: Every answer found a source code file.")
+#     else:
+#         print("\n⚠️ WARNING: Some answers had no sources.")
+
+# if __name__ == "__main__":
+#     run_ragas_lite_test()
+
+import os
 import pandas as pd
 from dotenv import load_dotenv
+from genai.chat_engine import KTChatEngine
 
 load_dotenv()
 API_KEY = os.getenv("GROQ_API_KEY")
 
-def run_ragas_lite_test():
-    # 1. Setup the Engine
+
+def run_ragas_lite_test(
+    project_name: str = "visioncortex",
+    user_role: str = "Developer",
+    test_queries=None
+):
     engine = KTChatEngine(API_KEY)
-    
-    # 2. Define "Golden Questions" (What the bot SHOULD know)
-    test_queries = [
-        "What database is used for storing faces?",
-        "How do I register a new face?",
-        "What happens if the 'logs' directory is missing?"
-    ]
-    
+
+    if test_queries is None or len(test_queries) == 0:
+        test_queries = [
+            "What database is used for storing faces?",
+            "How do I register a new face?",
+            "What happens if the 'logs' directory is missing?"
+        ]
+
     results = []
-    
-    print("🚀 Starting RAGAS-Lite Evaluation...")
-    
+
+    print(f"🚀 Starting RAGAS-Lite Evaluation for project='{project_name}', role='{user_role}'...")
+
     for query in test_queries:
         print(f"Testing: {query}")
-        response = engine.generate_response(query)
-        
-        # We simulate the RAGAS metrics: 
-        # Faithfulness: Is the answer in the source?
-        # Relevance: Does it answer the user?
-        
+
+        response = engine.generate_response(
+            user_query=query,
+            project_name=project_name,
+            user_role=user_role
+        )
+
         results.append({
+            "Project": project_name,
+            "Role": user_role,
             "Question": query,
-            "Answer": response['answer'][:100] + "...", # Snippet
-            "Sources": ", ".join(response['sources']),
-            "Source_Count": len(response['sources'])
+            "Answer": response["answer"][:200] + ("..." if len(response["answer"]) > 200 else ""),
+            "Sources": ", ".join(response["sources"]),
+            "Source_Count": len(response["sources"])
         })
 
-    # 3. Show a Summary Table
     df = pd.DataFrame(results)
-    print("\n--- Test Results ---")
-    print(df.to_string())
-    
-    if df['Source_Count'].min() > 0:
-        print("\n✅ PASSED: Every answer found a source code file.")
+
+    if not df.empty and df["Source_Count"].min() > 0:
+        print("\n✅ PASSED: Every answer found at least one source code file.")
     else:
         print("\n⚠️ WARNING: Some answers had no sources.")
 
+    return df
+
+
 if __name__ == "__main__":
-    run_ragas_lite_test()
+    df = run_ragas_lite_test(
+        project_name="visioncortex",
+        user_role="Developer"
+    )
+    print(df.to_string(index=False))
