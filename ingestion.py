@@ -61,8 +61,6 @@ from pathlib import Path
 from typing import Optional
 from dataclasses import dataclass, asdict, field
 
-# ── Optional deps (graceful degradation) ─────────────────────────────────
-
 try:
     import yaml          # pip install pyyaml
     YAML_AVAILABLE = True

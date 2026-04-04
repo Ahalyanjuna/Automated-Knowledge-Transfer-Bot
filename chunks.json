@@ -14,20 +14,20 @@
     "return_type": null,
     "parent": null,
     "imports": [
-      "pickle",
-      "numpy",
-      "fastapi.middleware.cors",
-      "pydantic",
-      "dotenv",
-      "feature_extractor",
       "bm25",
-      "fastapi",
-      "pandas",
-      "os",
       "graph_utils",
       "uvicorn",
+      "feature_extractor",
       "lightgbm",
-      "typing"
+      "fastapi.middleware.cors",
+      "typing",
+      "numpy",
+      "os",
+      "pydantic",
+      "fastapi",
+      "dotenv",
+      "pandas",
+      "pickle"
     ],
     "extra": {}
   },
@@ -46,20 +46,20 @@
     "return_type": null,
     "parent": null,
     "imports": [
-      "pickle",
-      "numpy",
-      "fastapi.middleware.cors",
-      "pydantic",
-      "dotenv",
-      "feature_extractor",
       "bm25",
-      "fastapi",
-      "pandas",
-      "os",
       "graph_utils",
       "uvicorn",
+      "feature_extractor",
       "lightgbm",
-      "typing"
+      "fastapi.middleware.cors",
+      "typing",
+      "numpy",
+      "os",
+      "pydantic",
+      "fastapi",
+      "dotenv",
+      "pandas",
+      "pickle"
     ],
     "extra": {}
   },
@@ -80,20 +80,20 @@
     "return_type": null,
     "parent": null,
     "imports": [
-      "pickle",
-      "numpy",
-      "fastapi.middleware.cors",
-      "pydantic",
-      "dotenv",
-      "feature_extractor",
       "bm25",
-      "fastapi",
-      "pandas",
-      "os",
       "graph_utils",
       "uvicorn",
+      "feature_extractor",
       "lightgbm",
-      "typing"
+      "fastapi.middleware.cors",
+      "typing",
+      "numpy",
+      "os",
+      "pydantic",
+      "fastapi",
+      "dotenv",
+      "pandas",
+      "pickle"
     ],
     "extra": {}
   },
@@ -180,12 +180,12 @@
     "parent": null,
     "imports": [
       "numpy",
-      "datasets",
+      "sentence_transformers",
       "random",
       "re",
-      "sentence_transformers",
+      "sklearn.metrics.pairwise",
       "pandas",
-      "sklearn.metrics.pairwise"
+      "datasets"
     ],
     "extra": {}
   },
@@ -207,12 +207,12 @@
     "parent": null,
     "imports": [
       "numpy",
-      "datasets",
+      "sentence_transformers",
       "random",
       "re",
-      "sentence_transformers",
+      "sklearn.metrics.pairwise",
       "pandas",
-      "sklearn.metrics.pairwise"
+      "datasets"
     ],
     "extra": {}
   },
@@ -304,12 +304,12 @@
     "parent": null,
     "imports": [
       "sklearn.feature_extraction.text",
-      "pickle",
       "numpy",
-      "sentence_transformers",
-      "pandas",
       "os",
-      "sklearn.metrics.pairwise"
+      "sentence_transformers",
+      "sklearn.metrics.pairwise",
+      "pandas",
+      "pickle"
     ],
     "extra": {}
   },
@@ -332,12 +332,12 @@
     "parent": "FeatureExtractor",
     "imports": [
       "sklearn.feature_extraction.text",
-      "pickle",
       "numpy",
-      "sentence_transformers",
-      "pandas",
       "os",
-      "sklearn.metrics.pairwise"
+      "sentence_transformers",
+      "sklearn.metrics.pairwise",
+      "pandas",
+      "pickle"
     ],
     "extra": {}
   },
@@ -359,12 +359,12 @@
     "parent": "FeatureExtractor",
     "imports": [
       "sklearn.feature_extraction.text",
-      "pickle",
       "numpy",
-      "sentence_transformers",
-      "pandas",
       "os",
-      "sklearn.metrics.pairwise"
+      "sentence_transformers",
+      "sklearn.metrics.pairwise",
+      "pandas",
+      "pickle"
     ],
     "extra": {}
   },
@@ -384,12 +384,12 @@
     "parent": "FeatureExtractor",
     "imports": [
       "sklearn.feature_extraction.text",
-      "pickle",
       "numpy",
-      "sentence_transformers",
-      "pandas",
       "os",
-      "sklearn.metrics.pairwise"
+      "sentence_transformers",
+      "sklearn.metrics.pairwise",
+      "pandas",
+      "pickle"
     ],
     "extra": {}
   },
@@ -415,12 +415,12 @@
     "parent": "FeatureExtractor",
     "imports": [
       "sklearn.feature_extraction.text",
-      "pickle",
       "numpy",
-      "sentence_transformers",
-      "pandas",
       "os",
-      "sklearn.metrics.pairwise"
+      "sentence_transformers",
+      "sklearn.metrics.pairwise",
+      "pandas",
+      "pickle"
     ],
     "extra": {}
   },
@@ -439,11 +439,11 @@
     "return_type": null,
     "parent": null,
     "imports": [
-      "time",
-      "re",
       "requests",
       "os",
-      "networkx"
+      "re",
+      "networkx",
+      "time"
     ],
     "extra": {}
   },
@@ -464,11 +464,11 @@
     "return_type": null,
     "parent": "CitationGraph",
     "imports": [
-      "time",
-      "re",
       "requests",
       "os",
-      "networkx"
+      "re",
+      "networkx",
+      "time"
     ],
     "extra": {}
   },
@@ -489,11 +489,11 @@
     "return_type": null,
     "parent": "CitationGraph",
     "imports": [
-      "time",
-      "re",
       "requests",
       "os",
-      "networkx"
+      "re",
+      "networkx",
+      "time"
     ],
     "extra": {}
   },
@@ -514,11 +514,11 @@
     "return_type": null,
     "parent": "CitationGraph",
     "imports": [
-      "time",
-      "re",
       "requests",
       "os",
-      "networkx"
+      "re",
+      "networkx",
+      "time"
     ],
     "extra": {}
   },
@@ -539,11 +539,11 @@
     "return_type": null,
     "parent": "CitationGraph",
     "imports": [
-      "time",
-      "re",
       "requests",
       "os",
-      "networkx"
+      "re",
+      "networkx",
+      "time"
     ],
     "extra": {}
   },
@@ -564,11 +564,11 @@
     "return_type": null,
     "parent": "CitationGraph",
     "imports": [
-      "time",
-      "re",
       "requests",
       "os",
-      "networkx"
+      "re",
+      "networkx",
+      "time"
     ],
     "extra": {}
   },
@@ -589,11 +589,11 @@
     "return_type": null,
     "parent": "CitationGraph",
     "imports": [
-      "time",
-      "re",
       "requests",
       "os",
-      "networkx"
+      "re",
+      "networkx",
+      "time"
     ],
     "extra": {}
   },
@@ -612,17 +612,17 @@
     "return_type": null,
     "parent": null,
     "imports": [
-      "evaluate",
-      "pickle",
-      "numpy",
-      "argparse",
-      "feature_extractor",
-      "random",
       "bm25",
-      "pandas",
-      "os",
+      "evaluate",
       "train_ltr",
-      "data_loader"
+      "feature_extractor",
+      "numpy",
+      "os",
+      "argparse",
+      "random",
+      "data_loader",
+      "pandas",
+      "pickle"
     ],
     "extra": {}
   },
@@ -643,17 +643,17 @@
     "return_type": null,
     "parent": null,
     "imports": [
-      "evaluate",
-      "pickle",
-      "numpy",
-      "argparse",
-      "feature_extractor",
-      "random",
       "bm25",
-      "pandas",
-      "os",
+      "evaluate",
       "train_ltr",
-      "data_loader"
+      "feature_extractor",
+      "numpy",
+      "os",
+      "argparse",
+      "random",
+      "data_loader",
+      "pandas",
+      "pickle"
     ],
     "extra": {}
   },

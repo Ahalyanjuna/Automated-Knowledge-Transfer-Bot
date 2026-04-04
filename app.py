@@ -9,8 +9,6 @@ import json
 load_dotenv()
 API_KEY = os.getenv("GROQ_API_KEY")
 
-# ─── DB Helpers ───────────────────────────────────────────────────────────────
-
 USERS_DB = os.path.join(os.getcwd(), os.getenv("USERS_DB"))
 RL_DB = os.path.join(os.getcwd(), os.getenv("RL_DB"))
 
@@ -344,9 +342,6 @@ def _render_admin_evaluator():
     key="eval_role"
     )
 
-    user = st.session_state.user
-    user_role = user[3] if user and len(user) > 3 else "Developer"
-
     eval_query = st.text_input(
         "Enter a query to evaluate",
         placeholder="Ask a question to test faithfulness and relevance..."
@@ -570,21 +565,6 @@ def show_user():
 
         st.divider()
 
-        # projects = get_available_projects()
-        # if projects:
-        #     if st.session_state.selected_project not in projects:
-        #         st.session_state.selected_project = projects[0]
-
-        #     st.session_state.selected_project = st.selectbox(
-        #         "Project",
-        #         options=projects,
-        #         index=projects.index(st.session_state.selected_project),
-        #         help="Choose which project knowledge base to ask about"
-        #     )
-        # else:
-        #     st.warning("No chroma_* project folders found in the root directory.")
-
-        # st.divider()
         st.info("💡 Ask anything about the selected codebase. Your feedback helps improve the bot.")
         st.divider()
         if st.button("🚪 Logout", use_container_width=True):
