@@ -114,6 +114,7 @@ Highlight how the data moves through the system.
           detected_lang_name - Human readable e.g. "Tamil"
           is_translated      - bool: True if query was not in English
           sources            - list of source file names
+          final_hits         - list of retrieved chunk dicts (for NLP Lens)
         """
 
         # ── Step 1: Detect & translate query ──────────────────────────────
@@ -123,7 +124,6 @@ Highlight how the data moves through the system.
         if is_translated:
             english_query = translate_to_english(user_query, detected_lang)
             if not english_query:
-                # Translation failed — use original as-is
                 english_query = user_query
                 is_translated = False
         else:
@@ -205,7 +205,7 @@ Context:
         answer_english = chat_completion.choices[0].message.content
 
         # ── Step 4: Translate response back if needed ──────────────────────
-        answer_original = answer_english  # default
+        answer_original = answer_english
         if is_translated and respond_in_original_lang:
             translated_back = translate_from_english(answer_english, detected_lang)
             if translated_back:
@@ -224,6 +224,7 @@ Context:
             "detected_lang_name": detected_lang_name,
             "is_translated": is_translated,
             "sources": list(set(sources)),
+            "final_hits": final_hits,           # ← NEW: for NLP Lens panel
         }
 
 

@@ -57,6 +57,7 @@ Return ONLY a JSON object in this format:
             "query": query,
             "answer": res["answer"],
             "sources": res["sources"],
+            "final_hits": res.get("final_hits", []),   # ← pass through chunk details
             "evaluation": score
         }
 

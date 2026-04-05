@@ -14,6 +14,11 @@ RL_DB = os.path.join(os.getcwd(), os.getenv("RL_DB"))
 
 PROJECT_CONFIG = json.loads(os.getenv("PROJECT_CONFIG"))
 
+# ── NEW: import NLP dashboard + NLP Lens ──────────────────────────────────────
+from genai.nlp_dashboard import render_nlp_dashboard
+from genai.nlp_lens import render_nlp_lens, render_nlp_mini_badge
+
+
 def get_users_conn():
     return sqlite3.connect(USERS_DB)
 
@@ -205,6 +210,19 @@ div.stButton > button {
 div.stButton > button:hover {
     transform: translateY(-1px);
 }
+
+/* Disable typing cursor in all selectboxes — dropdown only, pointer cursor */
+[data-baseweb="select"] input {
+    pointer-events: none !important;
+    caret-color: transparent !important;
+    cursor: pointer !important;
+}
+[data-baseweb="select"] {
+    cursor: pointer !important;
+}
+[data-baseweb="select"] * {
+    cursor: pointer !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -217,7 +235,11 @@ for key, default in [
     ("engine", None),
     ("auth_tab", "login"),
     ("selected_project", None),
-    ("response_in_original_lang", True),   # toggle: True = original lang, False = English
+    ("response_in_original_lang", True),
+    # NEW: stores last result dict so NLP Lens can re-render from history
+    ("last_nlp_result", None),
+    ("last_nlp_hits", []),
+    ("last_nlp_query", ""),
 ]:
     if key not in st.session_state:
         st.session_state[key] = default
@@ -289,7 +311,18 @@ def ensure_engine():
         with st.spinner("Initialising AI engine…"):
             st.session_state.engine = get_cached_engine(API_KEY)
 
-# ─── Admin Page ───────────────────────────────────────────────────────────────
+# ─── NLP Dashboard Helper ─────────────────────────────────────────────────────
+
+def _render_nlp_dashboard_tab(project_name: str):
+    """Wrapper that resolves paths and calls render_nlp_dashboard."""
+    db_path = os.path.join(os.getcwd(), f"chroma_{project_name}")
+    render_nlp_dashboard(
+        project_name=project_name,
+        db_path=db_path,
+        rl_db=RL_DB,
+    )
+
+# ─── Report Generator ────────────────────────────────────────────────────────
 
 def _render_report_generator(is_admin: bool):
     st.subheader("📄 Report Generator")
@@ -346,6 +379,8 @@ def _render_report_generator(is_admin: bool):
         except Exception as e:
             st.error(f"Failed to generate report: {e}")
 
+# ─── Admin-only sub-tabs ─────────────────────────────────────────────────────
+
 def _render_admin_evaluator():
     st.subheader("📊 Single Query Evaluator")
 
@@ -368,22 +403,61 @@ def _render_admin_evaluator():
             with st.spinner("Running evaluator..."):
                 result = evaluator.ask_and_evaluate(eval_query)
 
-            st.markdown("### Answer")
-            st.write(result["answer"])
+            # ── Scores row ────────────────────────────────────────────────
+            eval_data = result["evaluation"]
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Faithfulness", f"{eval_data.get('faithfulness', 'N/A')} / 5")
+            c2.metric("Relevance",    f"{eval_data.get('relevance', 'N/A')} / 5")
+            avg = None
+            try:
+                avg = round((int(eval_data.get("faithfulness", 0)) + int(eval_data.get("relevance", 0))) / 2, 1)
+            except Exception:
+                pass
+            if avg is not None:
+                c3.metric("Overall Avg", f"{avg} / 5")
 
-            st.markdown("### Sources")
-            if result["sources"]:
-                st.write(", ".join(result["sources"]))
+            # ── Evaluation reason ─────────────────────────────────────────
+            st.markdown("**🧠 Evaluation Reasoning**")
+            st.info(eval_data.get("reason", "No reason returned."))
+
+            # ── Answer ────────────────────────────────────────────────────
+            st.markdown("**💬 Answer**")
+            st.markdown(result["answer"])
+
+            # ── Sources with details ──────────────────────────────────────
+            st.markdown("**📂 Retrieved Sources**")
+            sources = result.get("sources", [])
+            final_hits = result.get("final_hits", [])
+
+            if final_hits:
+                for i, hit in enumerate(final_hits):
+                    fname = hit["metadata"].get("source_file", sources[i] if i < len(sources) else "Unknown")
+                    ctype = hit["metadata"].get("chunk_type", "—")
+                    lang  = hit["metadata"].get("normalized_lang") or hit["metadata"].get("language", "—")
+                    tokens = hit["metadata"].get("token_count", "—")
+                    tags_raw = hit["metadata"].get("tags", "[]")
+                    try:
+                        import ast
+                        tags = ast.literal_eval(tags_raw) if isinstance(tags_raw, str) else tags_raw
+                    except Exception:
+                        tags = []
+                    rl_score = hit.get("rl_score", None)
+
+                    with st.expander(f"Source {i+1}: `{fname.split('/')[-1]}`", expanded=(i == 0)):
+                        sc1, sc2, sc3, sc4 = st.columns(4)
+                        sc1.caption(f"**Type:** {ctype}")
+                        sc2.caption(f"**Lang:** {lang}")
+                        sc3.caption(f"**Tokens:** {tokens}")
+                        if rl_score is not None:
+                            sc4.caption(f"**RL Score:** {rl_score:.4f}")
+                        if tags:
+                            st.caption("**Tags:** " + " · ".join(f"`{t}`" for t in tags[:8]))
+                        st.code(hit.get("content", "")[:600], language=lang if lang != "—" else None)
+            elif sources:
+                for s in sources:
+                    st.markdown(f"- `{s}`")
             else:
                 st.write("No sources returned.")
-
-            eval_data = result["evaluation"]
-            c1, c2 = st.columns(2)
-            c1.metric("Faithfulness", eval_data.get("faithfulness", "N/A"))
-            c2.metric("Relevance", eval_data.get("relevance", "N/A"))
-
-            st.markdown("### Reason")
-            st.write(eval_data.get("reason", "No reason returned."))
 
         except Exception as e:
             st.error(f"Evaluator failed: {e}")
@@ -416,15 +490,52 @@ def _render_admin_ragas():
                     test_queries=custom_queries if custom_queries else None
                 )
 
-            st.markdown("### Test Results")
-            st.dataframe(df, use_container_width=True)
+            if df.empty:
+                st.warning("No results returned.")
+                return
 
-            if not df.empty:
-                min_sources = df["Source_Count"].min()
-                if min_sources > 0:
-                    st.success("All test queries returned at least one source.")
-                else:
-                    st.warning("Some test queries returned zero sources.")
+            # ── Summary metrics row ───────────────────────────────────────
+            total    = len(df)
+            sourced  = int((df["Source_Count"] > 0).sum())
+            avg_srcs = round(df["Source_Count"].mean(), 1)
+            unique_files = len(set(
+                f.strip()
+                for row in df["Sources"].dropna()
+                for f in row.split(",") if f.strip()
+            ))
+
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Queries Tested", total)
+            c2.metric("With Sources",   f"{sourced}/{total}")
+            c3.metric("Avg Sources",    avg_srcs)
+            c4.metric("Unique Files Hit", unique_files)
+
+            if sourced == total:
+                st.success("✅ All queries returned at least one source.")
+            else:
+                st.warning(f"⚠️ {total - sourced} query(ies) returned zero sources.")
+
+            # ── Per-query expandable results ──────────────────────────────
+            st.markdown("**🔍 Query-by-Query Breakdown**")
+            for _, row in df.iterrows():
+                src_count = row["Source_Count"]
+                icon = "✅" if src_count > 0 else "❌"
+                with st.expander(f"{icon} {row['Question'][:80]}", expanded=False):
+                    st.markdown(f"**💬 Answer**")
+                    st.markdown(row["Answer"])
+
+                    st.markdown(f"**📂 Sources** ({src_count} file{'s' if src_count != 1 else ''})")
+                    if row["Sources"]:
+                        for sf in row["Sources"].split(","):
+                            sf = sf.strip()
+                            if sf:
+                                st.markdown(f"- `{sf}`")
+                    else:
+                        st.caption("No sources retrieved.")
+
+            # ── Full dataframe ────────────────────────────────────────────
+            with st.expander("📋 Raw Results Table", expanded=False):
+                st.dataframe(df, use_container_width=True)
 
         except Exception as e:
             st.error(f"RAGAS test failed: {e}")
@@ -462,9 +573,12 @@ def _render_admin_feedback():
             st.success(f"RL model trained for project: {feedback_project}")
             st.rerun()
 
+# ─── Admin Page ───────────────────────────────────────────────────────────────
+
 def show_admin():
     ensure_engine()
     user = st.session_state.user
+    projects = get_available_projects()
 
     with st.sidebar:
         st.markdown(f'<div class="user-badge">👑 {user[2]} &nbsp;·&nbsp; Admin</div>', unsafe_allow_html=True)
@@ -472,26 +586,50 @@ def show_admin():
         if st.button("🚪 Logout", use_container_width=True):
             _logout()
 
+    active_project = st.session_state.selected_project or (projects[0] if projects else "")
+
     st.markdown(
         '<span style="font-family:Space Mono;font-size:1.6rem;font-weight:700;color:#a78bfa">🧠 KT Bot</span>',
         unsafe_allow_html=True
     )
 
-    tab_report, tab_chat, tab_eval, tab_ragas, tab_feedback = st.tabs(
-        ["📄 Report Generator", "💬 Chat", "📊 Evaluator", "🧪 RAGAS Test", "📋 Feedback"]
-    )
-
-    with tab_report:
-        _render_report_generator(is_admin=True)
+    (tab_chat, tab_report,
+     tab_eval, tab_ragas, tab_nlp, tab_feedback) = st.tabs([
+        "💬 Chat",
+        "📄 Report Generator",
+        "📊 Evaluator",
+        "🧪 RAGAS Test",
+        "🔬 NLP Dashboard",
+        "📋 Feedback",
+    ])
 
     with tab_chat:
         _render_chat(is_admin=True)
+
+    with tab_report:
+        _render_report_generator(is_admin=True)
 
     with tab_eval:
         _render_admin_evaluator()
 
     with tab_ragas:
         _render_admin_ragas()
+
+    with tab_nlp:
+        if projects:
+            selected = st.selectbox(
+                "📂 Active Project",
+                projects,
+                index=projects.index(st.session_state.selected_project)
+                      if st.session_state.selected_project in projects else 0,
+                key="nlp_tab_project",
+            )
+            if selected != st.session_state.selected_project:
+                st.session_state.selected_project = selected
+                st.rerun()
+            _render_nlp_dashboard_tab(selected)
+        else:
+            st.warning("No projects ingested yet. Run the NLP pipeline first.")
 
     with tab_feedback:
         _render_admin_feedback()
@@ -534,26 +672,35 @@ def _show_feedback_log(project_name=None):
 def show_user():
     ensure_engine()
     user = st.session_state.user
+    projects = get_available_projects()
 
     with st.sidebar:
         st.markdown(f'<div class="user-badge">👤 {user[2]}</div>', unsafe_allow_html=True)
         st.divider()
         st.caption(f"\n**{user[1]}** · {user[3]}")
         st.divider()
+
+        st.divider()
         st.info("💡 Ask anything about the selected codebase in any language. Your feedback helps improve the bot.")
         st.divider()
         if st.button("🚪 Logout", use_container_width=True):
             _logout()
 
-    st.markdown('<span style="font-family:Space Mono;font-size:1.6rem;font-weight:700;color:#a78bfa">🧠 KT Bot</span>', unsafe_allow_html=True)
+    st.markdown(
+        '<span style="font-family:Space Mono;font-size:1.6rem;font-weight:700;color:#a78bfa">🧠 KT Bot</span>',
+        unsafe_allow_html=True
+    )
 
-    tab_report, tab_chat = st.tabs(["📄 Report Generator", "💬 Chat"])
-
-    with tab_report:
-        _render_report_generator(is_admin=False)
+    tab_chat, tab_report = st.tabs([
+        "💬 Chat",
+        "📄 Report Generator",
+    ])
 
     with tab_chat:
         _render_chat(is_admin=False)
+
+    with tab_report:
+        _render_report_generator(is_admin=False)
 
 # ─── Translation Display Helpers ──────────────────────────────────────────────
 
@@ -590,10 +737,9 @@ def _render_response_with_toggle(message: dict, msg_index: int, is_admin: bool):
     lang_name = message.get("detected_lang_name", "English")
 
     if is_translated and answer_english and answer_english != answer_original:
-        # Toggle key per message
         toggle_key = f"lang_toggle_{msg_index}"
         if toggle_key not in st.session_state:
-            st.session_state[toggle_key] = False  # False = original lang, True = English
+            st.session_state[toggle_key] = False
 
         col_text, col_toggle = st.columns([8, 2])
 
@@ -618,8 +764,10 @@ def _render_response_with_toggle(message: dict, msg_index: int, is_admin: bool):
                     unsafe_allow_html=True
                 )
     else:
-        # No translation involved — render normally
         st.markdown(answer_original)
+
+    # ── NEW: mini NLP badge under every assistant reply ────────────────────
+    render_nlp_mini_badge(message)
 
 
 # ─── Shared Chat Renderer ─────────────────────────────────────────────────────
@@ -634,13 +782,11 @@ def _render_chat(is_admin: bool):
         with st.chat_message(message["role"]):
 
             if message["role"] == "user":
-                # Show original message text
                 st.markdown(message["content"])
-                # Show translation info if applicable
                 _render_translation_info(message)
 
             else:
-                # Assistant message — render with toggle
+                # Assistant message — render with toggle + mini badge
                 _render_response_with_toggle(message, i, is_admin)
 
                 if "sources" in message and message["sources"]:
@@ -673,6 +819,14 @@ def _render_chat(is_admin: bool):
                     if is_admin:
                         with col3:
                             st.caption("RL score shown in console · project-aware feedback saved to DB")
+
+    # ── NEW: NLP Lens panel — shown after last reply, persists until next query
+    if st.session_state.last_nlp_result:
+        render_nlp_lens(
+            query=st.session_state.last_nlp_query,
+            result=st.session_state.last_nlp_result,
+            final_hits=st.session_state.last_nlp_hits,
+        )
 
     st.divider()
 
@@ -713,12 +867,11 @@ def _render_chat(is_admin: bool):
             st.warning("Please enter a question.")
             return
 
-        # Add user message to history (show original query in chat bubble)
         st.session_state.messages.append({
             "role": "user",
-            "content": prompt,          # original query (shown in bubble)
+            "content": prompt,
             "project": selected_project,
-            "is_translated": False,     # will be updated after engine call
+            "is_translated": False,
         })
 
         with st.spinner("Thinking…"):
@@ -729,7 +882,7 @@ def _render_chat(is_admin: bool):
                 respond_in_original_lang=True,
             )
 
-        # Update the user message we just appended with translation info
+        # Update user message with translation metadata
         last_user_msg = st.session_state.messages[-1]
         last_user_msg["is_translated"] = result["is_translated"]
         last_user_msg["translated_query"] = result.get("translated_query")
@@ -737,17 +890,23 @@ def _render_chat(is_admin: bool):
         last_user_msg["detected_lang"] = result["detected_lang"]
         last_user_msg["detected_lang_name"] = result["detected_lang_name"]
 
-        # Add assistant message
+        # Add assistant message (include NLP badge fields)
         st.session_state.messages.append({
             "role": "assistant",
-            "content": result["answer"],                  # original-language answer
-            "answer_english": result["answer_english"],   # English answer (for toggle)
+            "content": result["answer"],
+            "answer_english": result["answer_english"],
             "sources": result["sources"],
             "project": selected_project,
             "is_translated": result["is_translated"],
             "detected_lang": result["detected_lang"],
             "detected_lang_name": result["detected_lang_name"],
         })
+
+        # ── NEW: stash NLP Lens data in session so it survives rerun ──────
+        st.session_state.last_nlp_query  = prompt
+        st.session_state.last_nlp_result = result
+        # final_hits is returned by the updated chat_engine (see note below)
+        st.session_state.last_nlp_hits   = result.get("final_hits", [])
 
         st.rerun()
 
@@ -759,6 +918,9 @@ def _logout():
     st.session_state.messages = []
     st.session_state.engine = None
     st.session_state.selected_project = None
+    st.session_state.last_nlp_result = None
+    st.session_state.last_nlp_hits = []
+    st.session_state.last_nlp_query = ""
     st.rerun()
 
 # ─── Router ───────────────────────────────────────────────────────────────────
