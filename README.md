@@ -1,22 +1,29 @@
 ```bash
-Create and activate virtual environment
+# ------------------------------------------------------
+# Create and activate virtual environment
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
-
+# ------------------------------------------------------
 # Install dependencies
 pip install -r requirements.txt
-
+# ------------------------------------------------------
 python ingestion.py --repo_url https://github.com/ArulKevin2004/VisionCortex
-
+# ------------------------------------------------------
 cd nlp_stage2
 python nlp_pipeline.py --input ../chunks.json --output ../output/nlp_chunks.json
 cd ..
+# ------------------------------------------------------
+# Edit load_chunks_to_chroma.py to set:
+INPUT_JSON      = Path("nlp_chunks.json")
+PERSIST_DIR     = Path("chroma_myproject")   # must match project name
+COLLECTION_NAME = "myproject_rag"
 
 cd genai 
 python load_chunks_to_chroma.py
 cd ..
-
+# ------------------------------------------------------
 streamlit run app.py
+# ------------------------------------------------------
 ```
 # 🧠 KT Bot — Automated Knowledge Transfer System
 
