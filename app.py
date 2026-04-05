@@ -23,13 +23,12 @@ def hash_password(pw: str) -> str:
 
 
 def authenticate(username: str, password: str):
-    """Returns user row or None."""
     with get_users_conn() as conn:
         row = conn.execute(
             "SELECT id, name, username, position FROM users WHERE username=? AND password=?",
             (username, hash_password(password))
         ).fetchone()
-    return row  # (id, name, username, position)
+    return row
 
 
 def register_user(name, email, username, position, password):
@@ -48,19 +47,13 @@ def register_user(name, email, username, position, password):
 
 
 def get_available_projects():
-    """
-    Finds all folders in the project root named like chroma_projectname
-    and returns ['projectname', ...]
-    """
     root = os.getcwd()
     projects = []
-
     for name in os.listdir(root):
         full_path = os.path.join(root, name)
         if os.path.isdir(full_path) and name.startswith("chroma_"):
             project_name = name.replace("chroma_", "", 1)
             projects.append(project_name)
-
     return sorted(projects)
 
 def get_report_projects():
@@ -79,13 +72,10 @@ def get_generated_report_path(project_name: str, is_admin: bool) -> str:
 def get_live_stats(project_name=None):
     if not os.path.exists(RL_DB):
         return 0, 0.0
-
     try:
         with sqlite3.connect(RL_DB) as conn:
-            # Check if project_name column exists
             cols = [row[1] for row in conn.execute("PRAGMA table_info(experiences)").fetchall()]
             has_project_col = "project_name" in cols
-
             if project_name and has_project_col:
                 count, avg = conn.execute(
                     "SELECT COUNT(*), AVG(reward) FROM experiences WHERE project_name=?",
@@ -95,7 +85,6 @@ def get_live_stats(project_name=None):
                 count, avg = conn.execute(
                     "SELECT COUNT(*), AVG(reward) FROM experiences"
                 ).fetchone()
-
         return (count or 0), (avg or 0.0)
     except Exception:
         return 0, 0.0
@@ -103,12 +92,10 @@ def get_live_stats(project_name=None):
 
 def record_feedback(query, score, project_name):
     engine = st.session_state.engine
-
     try:
         retriever = engine._get_retriever(project_name)
         q_vec = retriever.model.encode(query).tolist()
         ids = [hit["id"] for hit in retriever.search(query)]
-
         engine.logger.log_experience(project_name, query, q_vec, ids, score)
         st.toast(f"{'👍' if score > 0 else '👎'} Feedback recorded for {project_name}!")
     except Exception as e:
@@ -129,7 +116,6 @@ html, body, [class*="css"] {
     font-family: 'DM Sans', sans-serif;
 }
 
-/* ── Auth page ── */
 .auth-wrapper {
     max-width: 420px;
     margin: 4rem auto;
@@ -155,7 +141,6 @@ html, body, [class*="css"] {
     margin-bottom: 2rem;
 }
 
-/* ── Chat area ── */
 .user-badge {
     display: inline-flex;
     align-items: center;
@@ -169,7 +154,49 @@ html, body, [class*="css"] {
     font-family: 'Space Mono', monospace;
 }
 
-/* ── Buttons ── */
+/* ── Translation display boxes ── */
+.translation-box {
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    margin: 0.4rem 0;
+    font-size: 0.85rem;
+    line-height: 1.6;
+}
+.original-query-box {
+    background: rgba(167, 139, 250, 0.08);
+    border: 1px solid rgba(167, 139, 250, 0.25);
+    color: #c4b5fd;
+}
+.translated-query-box {
+    background: rgba(52, 211, 153, 0.08);
+    border: 1px solid rgba(52, 211, 153, 0.25);
+    color: #6ee7b7;
+}
+.lang-badge {
+    display: inline-block;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.1rem 0.5rem;
+    border-radius: 99px;
+    margin-right: 0.4rem;
+    letter-spacing: 0.05em;
+}
+.lang-badge-original {
+    background: rgba(167, 139, 250, 0.2);
+    color: #a78bfa;
+}
+.lang-badge-english {
+    background: rgba(52, 211, 153, 0.2);
+    color: #34d399;
+}
+.response-lang-note {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-top: 0.3rem;
+    font-style: italic;
+}
+
 div.stButton > button {
     border-radius: 8px;
     font-weight: 500;
@@ -178,7 +205,6 @@ div.stButton > button {
 div.stButton > button:hover {
     transform: translateY(-1px);
 }
-
 </style>
 """, unsafe_allow_html=True)
 
@@ -186,11 +212,12 @@ div.stButton > button:hover {
 
 for key, default in [
     ("authenticated", False),
-    ("user", None),                # (id, name, username, position)
+    ("user", None),
     ("messages", []),
     ("engine", None),
     ("auth_tab", "login"),
     ("selected_project", None),
+    ("response_in_original_lang", True),   # toggle: True = original lang, False = English
 ]:
     if key not in st.session_state:
         st.session_state[key] = default
@@ -204,7 +231,6 @@ def show_auth():
 
         tab_login, tab_register = st.tabs(["🔑 Login", "📝 Register"])
 
-        # ── Login ──
         with tab_login:
             with st.form("login_form"):
                 username = st.text_input("Username", placeholder="admin")
@@ -226,7 +252,6 @@ def show_auth():
                     else:
                         st.error("Invalid credentials.")
 
-        # ── Register ──
         with tab_register:
             with st.form("reg_form"):
                 r_name = st.text_input("Full Name")
@@ -284,8 +309,6 @@ def _render_report_generator(is_admin: bool):
     audience_role = user[3] if user and len(user) > 3 else ("admin" if is_admin else "user")
     repo_url = get_repo_url(report_project)
 
-    # st.caption(f"Repository: {repo_url}" if repo_url else "No repository configured for this project.")
-
     if st.button(
         "Generate Report",
         use_container_width=True,
@@ -309,15 +332,13 @@ def _render_report_generator(is_admin: bool):
 
             if ok and report_text:
                 st.success(msg)
-
                 st.markdown("### Preview")
                 st.markdown(report_text)
-
                 st.download_button(
-                "⬇️ Download Report",
-                data=report_text,
-                file_name=f"{report_project}_report.md",
-                mime="text/markdown"
+                    "⬇️ Download Report",
+                    data=report_text,
+                    file_name=f"{report_project}_report.md",
+                    mime="text/markdown"
                 )
             else:
                 st.error(msg)
@@ -330,22 +351,9 @@ def _render_admin_evaluator():
 
     projects = get_available_projects()
 
-    project_name = st.selectbox(
-        "Project",
-        projects,
-        key="eval_project"
-    )
-
-    user_role = st.selectbox(
-    "Test as role",
-    ["Developer", "Project Manager", "Data Scientist"],
-    key="eval_role"
-    )
-
-    eval_query = st.text_input(
-        "Enter a query to evaluate",
-        placeholder="Ask a question to test faithfulness and relevance..."
-    )
+    project_name = st.selectbox("Project", projects, key="eval_project")
+    user_role = st.selectbox("Test as role", ["Developer", "Project Manager", "Data Scientist"], key="eval_role")
+    eval_query = st.text_input("Enter a query to evaluate", placeholder="Ask a question to test faithfulness and relevance...")
 
     if st.button("Run Evaluator", use_container_width=True, key="run_evaluator_btn"):
         if not eval_query.strip():
@@ -355,11 +363,7 @@ def _render_admin_evaluator():
         try:
             from genai.evaluator import KTEvaluator
 
-            evaluator = KTEvaluator(
-                api_key=API_KEY,
-                project_name=project_name,
-                user_role=user_role
-            )
+            evaluator = KTEvaluator(api_key=API_KEY, project_name=project_name, user_role=user_role)
 
             with st.spinner("Running evaluator..."):
                 result = evaluator.ask_and_evaluate(eval_query)
@@ -374,7 +378,6 @@ def _render_admin_evaluator():
                 st.write("No sources returned.")
 
             eval_data = result["evaluation"]
-
             c1, c2 = st.columns(2)
             c1.metric("Faithfulness", eval_data.get("faithfulness", "N/A"))
             c2.metric("Relevance", eval_data.get("relevance", "N/A"))
@@ -390,21 +393,10 @@ def _render_admin_ragas():
     st.subheader("🧪 RAGAS Test")
 
     projects = get_available_projects()
-
-    project_name = st.selectbox(
-        "Project",
-        projects,
-        key="ragas_project"
-    )
- 
-    user_role = st.selectbox(
-    "Test as role",
-    ["Developer", "Project Manager", "Data Scientist"],
-    key="ragas_role"
-)
+    project_name = st.selectbox("Project", projects, key="ragas_project")
+    user_role = st.selectbox("Test as role", ["Developer", "Project Manager", "Data Scientist"], key="ragas_role")
 
     st.caption("Enter one query per line")
-
     query_block = st.text_area(
         "Test queries",
         placeholder="What database is used?\nHow is login handled?\nWhat happens if logs folder is missing?",
@@ -445,11 +437,7 @@ def _render_admin_feedback():
         st.warning("No chroma_* project folders found in the root directory.")
         return
 
-    feedback_project = st.selectbox(
-        "Project",
-        projects,
-        key="feedback_project"
-    )
+    feedback_project = st.selectbox("Project", projects, key="feedback_project")
 
     live_count, live_avg = get_live_stats(feedback_project)
 
@@ -467,7 +455,6 @@ def _render_admin_feedback():
         with st.spinner(f"Training RL model for {feedback_project}..."):
             train_from_db(feedback_project)
 
-            # Optional: clear cached RL agent for this project so the next query reloads the new model
             engine = st.session_state.engine
             if engine is not None and hasattr(engine, "rl_agent_cache"):
                 engine.rl_agent_cache.pop(feedback_project, None)
@@ -480,15 +467,8 @@ def show_admin():
     user = st.session_state.user
 
     with st.sidebar:
-        st.markdown(f"""
-        <div class="user-badge">👑 {user[2]} &nbsp;·&nbsp; Admin</div>
-        """, unsafe_allow_html=True)
-        # st.caption(f"**{user[1]}**")
-
-        # st.divider()
-        # st.info("Admin tools are available in separate tabs: Chat, Evaluator, RAGAS Test, and Feedback.")
+        st.markdown(f'<div class="user-badge">👑 {user[2]} &nbsp;·&nbsp; Admin</div>', unsafe_allow_html=True)
         st.divider()
-
         if st.button("🚪 Logout", use_container_width=True):
             _logout()
 
@@ -496,7 +476,6 @@ def show_admin():
         '<span style="font-family:Space Mono;font-size:1.6rem;font-weight:700;color:#a78bfa">🧠 KT Bot</span>',
         unsafe_allow_html=True
     )
-    # st.caption("Full RAG + RL · ask, evaluate, test, and manage project-specific feedback.")
 
     tab_report, tab_chat, tab_eval, tab_ragas, tab_feedback = st.tabs(
         ["📄 Report Generator", "💬 Chat", "📊 Evaluator", "🧪 RAGAS Test", "📋 Feedback"]
@@ -557,21 +536,16 @@ def show_user():
     user = st.session_state.user
 
     with st.sidebar:
-        st.markdown(f"""
-        <div class="user-badge">👤 {user[2]}</div>
-        """, unsafe_allow_html=True)
+        st.markdown(f'<div class="user-badge">👤 {user[2]}</div>', unsafe_allow_html=True)
         st.divider()
         st.caption(f"\n**{user[1]}** · {user[3]}")
-
         st.divider()
-
-        st.info("💡 Ask anything about the selected codebase. Your feedback helps improve the bot.")
+        st.info("💡 Ask anything about the selected codebase in any language. Your feedback helps improve the bot.")
         st.divider()
         if st.button("🚪 Logout", use_container_width=True):
             _logout()
 
     st.markdown('<span style="font-family:Space Mono;font-size:1.6rem;font-weight:700;color:#a78bfa">🧠 KT Bot</span>', unsafe_allow_html=True)
-    # st.caption(f"Welcome, **{user[1]}** · {user[3]}")
 
     tab_report, tab_chat = st.tabs(["📄 Report Generator", "💬 Chat"])
 
@@ -581,6 +555,73 @@ def show_user():
     with tab_chat:
         _render_chat(is_admin=False)
 
+# ─── Translation Display Helpers ──────────────────────────────────────────────
+
+def _render_translation_info(message: dict):
+    """Render the original + translated query display for a user message."""
+    if not message.get("is_translated"):
+        return
+
+    lang_name = message.get("detected_lang_name", "Unknown")
+    original = message.get("original_query", message["content"])
+    translated = message.get("translated_query", "")
+
+    st.markdown(
+        f'<div class="translation-box original-query-box">'
+        f'<span class="lang-badge lang-badge-original">🌐 {lang_name}</span>'
+        f'<strong>Original:</strong> {original}'
+        f'</div>',
+        unsafe_allow_html=True
+    )
+    st.markdown(
+        f'<div class="translation-box translated-query-box">'
+        f'<span class="lang-badge lang-badge-english">🇬🇧 English</span>'
+        f'<strong>Translated:</strong> {translated}'
+        f'</div>',
+        unsafe_allow_html=True
+    )
+
+
+def _render_response_with_toggle(message: dict, msg_index: int, is_admin: bool):
+    """Render the assistant response with a language toggle if applicable."""
+    is_translated = message.get("is_translated", False)
+    answer_original = message.get("content", "")
+    answer_english = message.get("answer_english", answer_original)
+    lang_name = message.get("detected_lang_name", "English")
+
+    if is_translated and answer_english and answer_english != answer_original:
+        # Toggle key per message
+        toggle_key = f"lang_toggle_{msg_index}"
+        if toggle_key not in st.session_state:
+            st.session_state[toggle_key] = False  # False = original lang, True = English
+
+        col_text, col_toggle = st.columns([8, 2])
+
+        with col_toggle:
+            show_english = st.toggle(
+                "🇬🇧 English",
+                key=toggle_key,
+                help=f"Toggle between {lang_name} and English response"
+            )
+
+        with col_text:
+            if show_english:
+                st.markdown(answer_english)
+                st.markdown(
+                    f'<div class="response-lang-note">📝 Showing English response</div>',
+                    unsafe_allow_html=True
+                )
+            else:
+                st.markdown(answer_original)
+                st.markdown(
+                    f'<div class="response-lang-note">🌐 Showing {lang_name} response · Toggle to see English</div>',
+                    unsafe_allow_html=True
+                )
+    else:
+        # No translation involved — render normally
+        st.markdown(answer_original)
+
+
 # ─── Shared Chat Renderer ─────────────────────────────────────────────────────
 
 def _render_chat(is_admin: bool):
@@ -588,44 +629,54 @@ def _render_chat(is_admin: bool):
     user = st.session_state.user
     user_role = user[3] if user and len(user) > 3 else "User"
 
-    # Display history
+    # ── Display history ────────────────────────────────────────────────────
     for i, message in enumerate(st.session_state.messages):
         with st.chat_message(message["role"]):
-            st.markdown(message["content"])
 
-            if "sources" in message and message["sources"]:
-                st.caption(f"📂 Sources: {', '.join(message['sources'])}")
+            if message["role"] == "user":
+                # Show original message text
+                st.markdown(message["content"])
+                # Show translation info if applicable
+                _render_translation_info(message)
 
-            if "project" in message and message["project"]:
-                st.caption(f"🧩 Project: {message['project']}")
+            else:
+                # Assistant message — render with toggle
+                _render_response_with_toggle(message, i, is_admin)
 
-            if message["role"] == "assistant" and i == len(st.session_state.messages) - 1:
-                orig_query = st.session_state.messages[i - 1]["content"] if i > 0 else ""
-                project_name = message.get("project")
-                col1, col2, col3 = st.columns([1, 1, 10])
+                if "sources" in message and message["sources"]:
+                    st.caption(f"📂 Sources: {', '.join(message['sources'])}")
 
-                with col1:
-                    st.button(
-                        "👍",
-                        key=f"up_{i}",
-                        on_click=record_feedback,
-                        args=(orig_query, 1.0, project_name)
-                    )
+                if "project" in message and message["project"]:
+                    st.caption(f"🧩 Project: {message['project']}")
 
-                with col2:
-                    st.button(
-                        "👎",
-                        key=f"down_{i}",
-                        on_click=record_feedback,
-                        args=(orig_query, -1.0, project_name)
-                    )
+                # Feedback buttons only for the last assistant message
+                if i == len(st.session_state.messages) - 1:
+                    orig_query = st.session_state.messages[i - 1].get("translated_query") \
+                                 or st.session_state.messages[i - 1]["content"] \
+                                 if i > 0 else ""
+                    project_name = message.get("project")
+                    col1, col2, col3 = st.columns([1, 1, 10])
 
-                if is_admin:
-                    with col3:
-                        st.caption("RL score shown in console · project-aware feedback saved to DB")
+                    with col1:
+                        st.button(
+                            "👍", key=f"up_{i}",
+                            on_click=record_feedback,
+                            args=(orig_query, 1.0, project_name)
+                        )
+                    with col2:
+                        st.button(
+                            "👎", key=f"down_{i}",
+                            on_click=record_feedback,
+                            args=(orig_query, -1.0, project_name)
+                        )
+
+                    if is_admin:
+                        with col3:
+                            st.caption("RL score shown in console · project-aware feedback saved to DB")
 
     st.divider()
 
+    # ── Project + Query form ───────────────────────────────────────────────
     projects = get_available_projects()
     if not projects:
         st.error("No project vector DBs found. Expected folders like chroma_projectname in the root.")
@@ -647,39 +698,55 @@ def _render_chat(is_admin: bool):
 
         with col2:
             prompt = st.text_input(
-                "Ask your question",
-                placeholder="Ask about the selected project..."
+                "Ask your question (any language)",
+                placeholder="Ask anything… / எதாவது கேளுங்கள்… / कुछ भी पूछें…"
             )
 
         submitted = st.form_submit_button("Ask", use_container_width=True)
 
     st.session_state.selected_project = selected_project
 
-    st.caption(f"Role-aware mode: **{user_role}** · Selected project: **{selected_project}**")
+    st.caption(f"Role-aware mode: **{user_role}** · Selected project: **{selected_project}** · 🌐 Multilingual enabled")
 
     if submitted:
         if not prompt.strip():
             st.warning("Please enter a question.")
             return
 
+        # Add user message to history (show original query in chat bubble)
         st.session_state.messages.append({
             "role": "user",
-            "content": prompt,
-            "project": selected_project
+            "content": prompt,          # original query (shown in bubble)
+            "project": selected_project,
+            "is_translated": False,     # will be updated after engine call
         })
 
         with st.spinner("Thinking…"):
             result = engine.generate_response(
                 user_query=prompt,
                 project_name=selected_project,
-                user_role=user_role
+                user_role=user_role,
+                respond_in_original_lang=True,
             )
 
+        # Update the user message we just appended with translation info
+        last_user_msg = st.session_state.messages[-1]
+        last_user_msg["is_translated"] = result["is_translated"]
+        last_user_msg["translated_query"] = result.get("translated_query")
+        last_user_msg["original_query"] = result["original_query"]
+        last_user_msg["detected_lang"] = result["detected_lang"]
+        last_user_msg["detected_lang_name"] = result["detected_lang_name"]
+
+        # Add assistant message
         st.session_state.messages.append({
             "role": "assistant",
-            "content": result["answer"],
+            "content": result["answer"],                  # original-language answer
+            "answer_english": result["answer_english"],   # English answer (for toggle)
             "sources": result["sources"],
-            "project": selected_project
+            "project": selected_project,
+            "is_translated": result["is_translated"],
+            "detected_lang": result["detected_lang"],
+            "detected_lang_name": result["detected_lang_name"],
         })
 
         st.rerun()
