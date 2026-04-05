@@ -1,6 +1,5 @@
-# Automated-Knowledge-Transfer-Bot
-
-# Create and activate virtual environment
+```bash
+Create and activate virtual environment
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
@@ -18,11 +17,7 @@ python load_chunks_to_chroma.py
 cd ..
 
 streamlit run app.py
-
-2. Configuration
-Open app.py and genai/chat_engine.py and ensure your Groq API Key is set:
-GROQ_API_KEY = "your-api-key"
-
+```
 # 🧠 KT Bot — Automated Knowledge Transfer System
 
 > Transform any software repository into an intelligent, multilingual Q&A assistant powered by NLP, vector search, and reinforcement learning.
