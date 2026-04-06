@@ -57,13 +57,7 @@ except Exception:
 # CSS  (injected once per session)
 # ─────────────────────────────────────────────────────────────────────────────
 
-_CSS_INJECTED = False
-
 def _inject_css():
-    global _CSS_INJECTED
-    if _CSS_INJECTED:
-        return
-    _CSS_INJECTED = True
     st.markdown("""
 <style>
 /* ── NLP Lens shell ── */
@@ -174,7 +168,7 @@ def _inject_css():
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0;
+    gap: 4px;
     margin: 0.5rem 0;
 }
 .pipe-step {
@@ -183,27 +177,22 @@ def _inject_css():
     gap: 4px;
     font-family: 'Space Mono', monospace;
     font-size: 0.65rem;
-    padding: 3px 9px;
+    padding: 4px 10px;
     border-radius: 4px;
-    animation: fadeInStep 0.3s ease forwards;
-    opacity: 0;
+    opacity: 1;
 }
 .pipe-arrow {
-    color: #374151;
-    font-size: 0.7rem;
+    color: #4b5563;
+    font-size: 0.75rem;
     margin: 0 1px;
+    font-weight: bold;
 }
-.ps-clean  { background: rgba(99,102,241,0.15); color:#818cf8; border:1px solid #3730a3; animation-delay:.05s; }
-.ps-ner    { background: rgba(52,211,153,0.12); color:#34d399; border:1px solid #065f46; animation-delay:.15s; }
-.ps-chunk  { background: rgba(251,191,36,0.1);  color:#fbbf24; border:1px solid #92400e; animation-delay:.25s; }
-.ps-tag    { background: rgba(236,72,153,0.1);  color:#f472b6; border:1px solid #9d174d; animation-delay:.35s; }
-.ps-embed  { background: rgba(14,165,233,0.12); color:#38bdf8; border:1px solid #075985; animation-delay:.45s; }
-.ps-ml     { background: rgba(167,139,250,0.15);color:#a78bfa; border:1px solid #5b21b6; animation-delay:.55s; }
-
-@keyframes fadeInStep {
-    from { opacity:0; transform: translateY(4px); }
-    to   { opacity:1; transform: translateY(0);   }
-}
+.ps-clean  { background: rgba(99,102,241,0.15); color:#818cf8; border:1px solid #3730a3; }
+.ps-ner    { background: rgba(52,211,153,0.12); color:#34d399; border:1px solid #065f46; }
+.ps-chunk  { background: rgba(251,191,36,0.1);  color:#fbbf24; border:1px solid #92400e; }
+.ps-tag    { background: rgba(236,72,153,0.1);  color:#f472b6; border:1px solid #9d174d; }
+.ps-embed  { background: rgba(14,165,233,0.12); color:#38bdf8; border:1px solid #075985; }
+.ps-ml     { background: rgba(167,139,250,0.15);color:#a78bfa; border:1px solid #5b21b6; }
 
 /* ── Chunk metadata cards ── */
 .chunk-card {
@@ -445,22 +434,41 @@ def _render_ner_badges(entities: list[dict]) -> str:
         )
     return f'<div class="ner-row">{badges}</div>'
 
+# def _render_pipeline_trace(tokens: list[dict], entities: list[dict],
+#                             lang: str, is_translated: bool) -> str:
+#     steps = [
+#         ("ps-clean",  "🧹", f"clean·{len(tokens)}tok"),
+#         ("ps-ner",    "🏷️",  f"ner·{len(entities)}ent"),
+#         ("ps-chunk",  "✂️",  "chunk"),
+#         ("ps-tag",    "🔖",  "tag"),
+#         ("ps-embed",  "📐",  "embed·384d"),
+#         ("ps-ml",     "🌐",  f"lang·{lang}" + ("→en" if is_translated else "")),
+#     ]
+#     html_out = '<div class="pipe-trace">'
+#     for i, (cls, icon, label) in enumerate(steps):
+#         html_out += f'<span class="pipe-step {cls}">{icon} {label}</span>'
+#         if i < len(steps) - 1:
+#             html_out += '<span class="pipe-arrow">→</span>'
+#     html_out += '</div>'
+#     return html_out
 def _render_pipeline_trace(tokens: list[dict], entities: list[dict],
                             lang: str, is_translated: bool) -> str:
     steps = [
-        ("ps-clean",  "🧹", f"clean·{len(tokens)}tok"),
-        ("ps-ner",    "🏷️",  f"ner·{len(entities)}ent"),
-        ("ps-chunk",  "✂️",  "chunk"),
-        ("ps-tag",    "🔖",  "tag"),
-        ("ps-embed",  "📐",  "embed·384d"),
-        ("ps-ml",     "🌐",  f"lang·{lang}" + ("→en" if is_translated else "")),
+        ("ps-clean",  f"clean·{len(tokens)}tok"),
+        ("ps-ner",    f"ner·{len(entities)}ent"),
+        ("ps-chunk",  "chunk"),
+        ("ps-tag",    "tag"),
+        ("ps-embed",  "embed·384d"),
+        ("ps-ml",     f"lang·{lang}" + ("→en" if is_translated else "")),
     ]
+
     html_out = '<div class="pipe-trace">'
-    for i, (cls, icon, label) in enumerate(steps):
-        html_out += f'<span class="pipe-step {cls}">{icon} {label}</span>'
+    for i, (cls, label) in enumerate(steps):
+        html_out += f'<span class="pipe-step {cls}">{label}</span>'
         if i < len(steps) - 1:
             html_out += '<span class="pipe-arrow">→</span>'
     html_out += '</div>'
+    
     return html_out
 
 def _render_faithfulness_heatmap(faith_tokens: list[dict]) -> str:
@@ -501,9 +509,9 @@ def _render_chunk_card(hit: dict, idx: int) -> str:
 
     # Flags
     flags = []
-    if has_doc:  flags.append("📖 docstring")
-    if has_test: flags.append("🧪 tests")
-    if has_todo: flags.append("📌 todos")
+    if has_doc:  flags.append("docstring")
+    if has_test: flags.append("tests")
+    if has_todo: flags.append("todos")
     flags_html = " ".join(f'<span class="stat-pill">{f}</span>' for f in flags)
 
     rl_html = ""
@@ -585,13 +593,13 @@ def render_nlp_lens(
         faith_tokens = []
 
     # ── Render inside expander ────────────────────────────────────────────
-    with st.expander("🔬 NLP Lens — See what the pipeline did", expanded=False):
+    with st.expander("NLP Lens — See what the pipeline did", expanded=False):
 
         st.markdown('<div class="nlp-lens-wrap">', unsafe_allow_html=True)
 
         # ── SECTION 1: Query Analysis ─────────────────────────────────────
         st.markdown(
-            '<div class="nlp-lens-title">🔍 Query NLP Analysis</div>',
+            '<div class="nlp-lens-title">Query NLP Analysis</div>',
             unsafe_allow_html=True
         )
 
@@ -600,7 +608,7 @@ def render_nlp_lens(
         flag_note = " · translated → English for retrieval" if is_translated else ""
         st.markdown(
             f'<span class="lang-pill">'
-            f'🌐 {lang_display} <span class="lang-conf">({detected_lang}){flag_note}</span>'
+            f'{lang_display} <span class="lang-conf">({detected_lang}){flag_note}</span>'
             f'</span>',
             unsafe_allow_html=True
         )
@@ -622,7 +630,7 @@ def render_nlp_lens(
             _render_token_chips(tokens),
             unsafe_allow_html=True
         )
-        st.caption("🟦 content word · 🟡 number · ⬛ punctuation · dimmed = stopword")
+        st.caption("content word · number · punctuation · dimmed = stopword")
 
         # NER
         st.markdown('<div class="nlp-section-label">Named Entity Recognition</div>', unsafe_allow_html=True)
@@ -641,7 +649,7 @@ def render_nlp_lens(
         # ── SECTION 2: Source Chunk NLP ───────────────────────────────────
         if show_source_nlp and final_hits:
             st.markdown(
-                '<div class="nlp-lens-title">📦 Retrieved Chunk NLP Metadata</div>',
+                '<div class="nlp-lens-title">Retrieved Chunk NLP Metadata</div>',
                 unsafe_allow_html=True
             )
             st.caption("These are the chunks the retriever selected. Their NLP metadata powered the answer.")
@@ -654,7 +662,7 @@ def render_nlp_lens(
         # ── SECTION 3: Faithfulness Heatmap ──────────────────────────────
         if show_faithfulness and faith_tokens:
             st.markdown(
-                '<div class="nlp-lens-title">🎯 Answer Faithfulness Heatmap</div>',
+                '<div class="nlp-lens-title">Answer Faithfulness Heatmap</div>',
                 unsafe_allow_html=True
             )
 
@@ -674,7 +682,7 @@ def render_nlp_lens(
             st.markdown(_render_faithfulness_heatmap(faith_tokens), unsafe_allow_html=True)
             st.caption(
                 "**How to read this:** Every word in the AI answer is shown. "
-                "🟢 Green words appear in the retrieved source code, meaning the answer is grounded. "
+                "Green words appear in the retrieved source code, meaning the answer is grounded. "
                 "Grey words are generated additions."
             )
 
@@ -697,11 +705,11 @@ def render_nlp_mini_badge(result: dict):
     sources  = result.get("sources", [])
 
     pills = [
-        f'<span class="stat-pill">🌐 <span>{lang_nm}</span></span>',
-        f'<span class="stat-pill">📂 <span>{len(sources)} sources</span></span>',
+        f'<span class="stat-pill">lang: <span>{lang_nm}</span></span>',
+        f'<span class="stat-pill">sources: <span>{len(sources)}</span></span>',
     ]
     if xlated:
-        pills.append('<span class="stat-pill">🔄 <span>translated</span></span>')
+        pills.append('<span class="stat-pill">translated</span>')
 
     st.markdown(
         f'<div class="stat-pills" style="margin-top:0.3rem">{"".join(pills)}</div>',
