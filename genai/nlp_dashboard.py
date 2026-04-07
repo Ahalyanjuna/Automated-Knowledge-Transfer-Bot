@@ -27,6 +27,7 @@ from typing import Optional
 import streamlit as st
 import pandas as pd
 import numpy as np
+import plotly.express as px
 
 # ── optional heavy deps ────────────────────────────────────────────────────
 try:

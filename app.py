@@ -679,8 +679,6 @@ def show_user():
         st.divider()
         st.caption(f"\n**{user[1]}** · {user[3]}")
         st.divider()
-
-        st.divider()
         st.info("💡 Ask anything about the selected codebase in any language. Your feedback helps improve the bot.")
         st.divider()
         if st.button("🚪 Logout", use_container_width=True):
@@ -860,7 +858,7 @@ def _render_chat(is_admin: bool):
 
     st.session_state.selected_project = selected_project
 
-    st.caption(f"Role-aware mode: **{user_role}** · Selected project: **{selected_project}** · 🌐 Multilingual enabled")
+    # st.caption(f"Role-aware mode: **{user_role}** · Selected project: **{selected_project}** · 🌐 Multilingual enabled")
 
     if submitted:
         if not prompt.strip():

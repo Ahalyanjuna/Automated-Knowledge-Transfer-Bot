@@ -2,7 +2,7 @@ import sqlite3
 import json
 import numpy as np
 import os
-
+import plotly.express as px
 from genai.rl_agent import RLAgent
 from genai.retriever import KTRetriever
 

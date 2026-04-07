@@ -7,3 +7,4 @@ streamlit
 openai
 groq
 torchvision
+plotly
