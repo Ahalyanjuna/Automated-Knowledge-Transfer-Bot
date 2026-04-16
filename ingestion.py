@@ -1,6 +1,6 @@
 """
 =============================================================================
-STAGE 1 — INPUT INGESTION & PARSING  (Universal Edition)
+STAGE 1 — INPUT INGESTION & PARSING
 KT Bot: Automated Knowledge Transfer System
 =============================================================================
 Handles EVERY file type found in a GitHub repo.
@@ -17,7 +17,7 @@ Dedicated parsers
   .css / .scss / .sass / .less → CSS rule-block parser  (selectors, properties)
   .json            → JSON structure parser  (keys, nested objects)
   .yaml / .yml     → YAML structure parser  (top-level keys / sections)
-  .toml            → TOML section parser
+  .toml            → TOML section parser 
   .xml / .svg      → XML element parser
   .sh / .bash / .zsh → Shell function + comment parser
   .sql             → SQL statement parser  (CREATE, SELECT, INSERT …)
